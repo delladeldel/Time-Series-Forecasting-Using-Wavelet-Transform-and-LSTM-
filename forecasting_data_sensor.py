@@ -11,7 +11,6 @@ N_PREDICT = 60
 MODEL_PATH = 'model.h5'
 SCALER_PATH = 'scaler.pkl'
 
-# Load model and scaler
 @st.cache_resource
 def load_model_and_scaler():
     model = load_model(MODEL_PATH)
@@ -20,14 +19,12 @@ def load_model_and_scaler():
 
 model, scaler = load_model_and_scaler()
 
-# UI
 st.title("📈 Forecasting 10 Menit ke Depan")
 st.write("Upload minimal 60 data terakhir dalam 1 kolom CSV")
 
 uploaded_file = st.file_uploader("Upload CSV atau Excel", type=["csv", "xlsx", "xls"])
 
 if uploaded_file:
-    # Deteksi berdasarkan ekstensi
     if uploaded_file.name.endswith('.csv'):
         df = pd.read_csv(uploaded_file)
     elif uploaded_file.name.endswith(('.xlsx', '.xls')):
@@ -42,12 +39,10 @@ if uploaded_file:
         st.error("Pastikan file hanya memiliki satu kolom angka di kolom pertama.")
         st.stop()
 
-    # Ambil 60 data terakhir & scaling
     last_60 = data[-WINDOW_SIZE:].reshape(-1, 1)
     last_scaled = scaler.transform(last_60)
     input_seq = last_scaled.reshape(1, WINDOW_SIZE, 1)
 
-    # Prediksi 60 langkah ke depan
     predictions = []
     current_input = input_seq.copy()
 
@@ -58,7 +53,6 @@ if uploaded_file:
 
     predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1)).flatten()
 
-    # Plot hasil
     st.subheader("Grafik Prediksi 10 Menit ke Depan")
     fig, ax = plt.subplots()
     ax.plot(range(len(data)), data, label="Data Aktual")
@@ -67,7 +61,6 @@ if uploaded_file:
     ax.legend()
     st.pyplot(fig)
 
-    # Tampilkan nilai
     st.subheader("Tabel Prediksi")
     pred_df = pd.DataFrame({
         "Langkah ke-": list(range(1, N_PREDICT+1)),
