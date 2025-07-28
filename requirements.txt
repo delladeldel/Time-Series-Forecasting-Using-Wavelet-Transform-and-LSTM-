@@ -6,4 +6,4 @@ numpy
 matplotlib
 joblib
 openpyxl
-pywt
+PyWavelets==1.4.1  # Jika kamu pakai wavelet transform
