@@ -1,72 +1,36 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import joblib
-from tensorflow.keras.models import load_model
-import matplotlib.pyplot as plt
+import pickle
+from keras.models import load_model
 
-# CONFIG
-WINDOW_SIZE = 60
-N_PREDICT = 60
-MODEL_PATH = 'model.h5'
-SCALER_PATH = 'scaler.pkl'
+st.title("Prediksi LSTM 10 Menit ke Depan")
 
-@st.cache_resource
-def load_model_and_scaler():
-    model = load_model(MODEL_PATH)
-    scaler = joblib.load(SCALER_PATH)
-    return model, scaler
+# Load model
+model = load_model("model.h5")
 
-model, scaler = load_model_and_scaler()
+# Load scaler
+with open("scaler.pkl", "rb") as f:
+    scaler = pickle.load(f)
 
-st.title("📈 Forecasting 10 Menit ke Depan")
-st.write("Upload minimal 60 data terakhir dalam 1 kolom CSV")
-
-uploaded_file = st.file_uploader("Upload CSV atau Excel", type=["csv", "xlsx", "xls"])
-
+# Upload data
+uploaded_file = st.file_uploader("Upload data sensor (CSV)", type="csv")
 if uploaded_file:
-    if uploaded_file.name.endswith('.csv'):
-        df = pd.read_csv(uploaded_file)
-    elif uploaded_file.name.endswith(('.xlsx', '.xls')):
-        df = pd.read_excel(uploaded_file)
-    else:
-        st.error("Format file tidak dikenali.")
-        st.stop()
+    df = pd.read_csv(uploaded_file)
+    st.write("Data Asli:")
+    st.dataframe(df.tail(10))
 
-    try:
-        data = df.iloc[:, 0].values.astype(float)
-    except:
-        st.error("Pastikan file hanya memiliki satu kolom angka di kolom pertama.")
-        st.stop()
+    # --- Preprocess ---
+    # (Pastikan kolom yang dipakai sama dengan waktu training)
+    # Contoh: ambil 60 data terakhir
+    window_size = 60
+    values = df['tag_value'].values[-window_size:].reshape(-1, 1)
+    scaled = scaler.transform(values)
+    X_input = np.array([scaled])  # LSTM expects shape (batch, timesteps, features)
 
-    last_60 = data[-WINDOW_SIZE:].reshape(-1, 1)
-    last_scaled = scaler.transform(last_60)
-    input_seq = last_scaled.reshape(1, WINDOW_SIZE, 1)
+    # --- Prediksi ---
+    prediction = model.predict(X_input)
+    prediction_rescaled = scaler.inverse_transform(prediction)
 
-    predictions = []
-    current_input = input_seq.copy()
-
-    for _ in range(N_PREDICT):
-        pred = model.predict(current_input, verbose=0)[0][0]
-        predictions.append(pred)
-        current_input = np.append(current_input[:, 1:, :], [[[pred]]], axis=1)
-
-    predictions = scaler.inverse_transform(np.array(predictions).reshape(-1, 1)).flatten()
-
-    st.subheader("Grafik Prediksi 10 Menit ke Depan")
-    fig, ax = plt.subplots()
-    ax.plot(range(len(data)), data, label="Data Aktual")
-    ax.plot(range(len(data), len(data)+N_PREDICT), predictions, color='red', label="Prediksi")
-    ax.axvline(len(data)-1, color='gray', linestyle='--')
-    ax.legend()
-    st.pyplot(fig)
-
-    st.subheader("Tabel Prediksi")
-    pred_df = pd.DataFrame({
-        "Langkah ke-": list(range(1, N_PREDICT+1)),
-        "Prediksi": predictions
-    })
-    st.dataframe(pred_df)
-
-else:
-    st.info("Silakan upload file CSV dengan minimal 60 data.")
+    st.subheader("Prediksi 10 Menit Kedepan:")
+    st.line_chart(prediction_rescaled.flatten())
