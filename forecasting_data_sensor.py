@@ -54,8 +54,8 @@ if uploaded_file:
 
     # Pastikan bentuk datanya cocok
     if prediction_rescaled.shape[1] == 1:
-    # Hanya satu prediksi
-    pred_df = pd.DataFrame(prediction_rescaled.flatten(), columns=["Prediksi"])
+        # Hanya satu prediksi
+        pred_df = pd.DataFrame(prediction_rescaled.flatten(), columns=["Prediksi"])
     else:
         # Banyak prediksi (multi-step)
         pred_df = pd.DataFrame(prediction_rescaled[0], columns=["Prediksi"])
