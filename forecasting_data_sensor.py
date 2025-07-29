@@ -13,7 +13,7 @@ st.title("📈 Prediksi Time Series dengan Wavelet Transform + LSTM")
 @st.cache_resource
 def load_model_and_scaler():
     model = load_model("model.h5")
-    scaler = joblib.load("scaler.pkl")  # Ganti sesuai nama file scaler kamu
+    scaler = joblib.load("scaler.joblib")  # Ganti sesuai nama file scaler kamu
     return model, scaler
 
 model, scaler = load_model_and_scaler()
