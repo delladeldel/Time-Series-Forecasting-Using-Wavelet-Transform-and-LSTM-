@@ -10,7 +10,7 @@ st.title("🔮 Prediksi LSTM 10 Menit ke Depan")
 
 # Load model
 try:
-    model = load_model("/mnt/data/model.h5")
+    model = load_model("model.h5")
     st.success("✅ Model berhasil dimuat.")
 except Exception as e:
     st.error(f"❌ Gagal memuat model.h5: {e}")
@@ -18,7 +18,7 @@ except Exception as e:
 
 # Load scaler
 try:
-    scaler = joblib.load("/mnt/data/scaler.pkl")
+    scaler = joblib.load("/scaler.pkl")
     st.success("✅ Scaler berhasil dimuat.")
 except Exception as e:
     st.error(f"❌ Gagal memuat scaler.pkl: {e}")
