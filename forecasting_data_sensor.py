@@ -18,7 +18,7 @@ except Exception as e:
 
 # Load scaler
 try:
-    scaler = joblib.load("/scaler.pkl")
+    scaler = joblib.load("scaler.pkl")
     st.success("✅ Scaler berhasil dimuat.")
 except Exception as e:
     st.error(f"❌ Gagal memuat scaler.pkl: {e}")
