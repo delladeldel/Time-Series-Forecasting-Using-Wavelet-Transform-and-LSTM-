@@ -46,10 +46,25 @@ if uploaded_file:
     X_input = np.array([scaled])  # Shape: (1, 60, 1)
 
     # Prediction
-    prediction = model.predict(X_input)
+    prediction = model.predict(X_input)  # Harusnya hasilkan (1, 10)
     prediction_rescaled = scaler.inverse_transform(prediction)
 
-    # Show result
-    st.subheader("📈 Prediksi 10 Menit Kedepan:")
-    st.line_chart(prediction_rescaled.flatten())
+    # Debug print
+    st.write("Hasil prediksi (array):", prediction_rescaled)
+
+    # Pastikan bentuk datanya cocok
+    if prediction_rescaled.shape[1] == 1:
+    # Hanya satu prediksi
+    pred_df = pd.DataFrame(prediction_rescaled.flatten(), columns=["Prediksi"])
+    else:
+        # Banyak prediksi (multi-step)
+        pred_df = pd.DataFrame(prediction_rescaled[0], columns=["Prediksi"])
+
+# Show result
+st.subheader("📈 Prediksi 10 Menit Kedepan:")
+st.line_chart(pred_df)
+
+
+
+
 
