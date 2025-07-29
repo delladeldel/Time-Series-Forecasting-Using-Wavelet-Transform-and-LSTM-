@@ -7,7 +7,7 @@ import joblib
 
 # Konfigurasi halaman
 st.set_page_config(page_title="Prediksi Wavelet+LSTM", layout="wide")
-st.title("📈 Prediksi Time Series dengan Wavelet Transfomr + LSTM")
+st.title("📈 Prediksi Time Series dengan Wavelet Transform + LSTM")
 
 # Load model & scaler
 @st.cache_resource
