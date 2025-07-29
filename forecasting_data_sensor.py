@@ -1,87 +1,75 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
-import joblib
-from keras.models import load_model
+import numpy as np
 import matplotlib.pyplot as plt
+from keras.models import load_model
+import joblib
 
-st.set_page_config(page_title="Prediksi LSTM", layout="centered")
-st.title("🔮 Prediksi LSTM 10 Menit ke Depan")
+# Konfigurasi halaman
+st.set_page_config(page_title="Prediksi CNN+LSTM", layout="wide")
+st.title("📈 Prediksi Time Series dengan CNN + LSTM")
 
-# Load model
-try:
+# Load model & scaler
+@st.cache_resource
+def load_model_and_scaler():
     model = load_model("model.h5")
-    st.success("✅ Model berhasil dimuat.")
-except Exception as e:
-    st.error(f"❌ Gagal memuat model.h5: {e}")
-    st.stop()
-
-# Load scaler
-try:
     scaler = joblib.load("scaler.joblib")
-    st.success("✅ Scaler berhasil dimuat.")
-except Exception as e:
-    st.error(f"❌ Gagal memuat scaler.joblib: {e}")
-    st.stop()
+    return model, scaler
 
-# Upload file
-uploaded_file = st.file_uploader("📁 Upload file CSV dengan kolom 'tag_value'", type="csv")
+model, scaler = load_model_and_scaler()
+
+# Fungsi membuat sequence sliding window
+def create_sequences(data, window_size=60):
+    X = []
+    for i in range(window_size, len(data)):
+        X.append(data[i - window_size:i])
+    return np.array(X)
+
+# Upload file CSV
+uploaded_file = st.file_uploader("Unggah file CSV dengan kolom 'ddate' dan 'tag_value'", type=["csv"])
+
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
 
-    if 'tag_value' not in df.columns:
-        st.error("❌ Kolom 'tag_value' tidak ditemukan dalam file.")
-        st.stop()
-
-    st.subheader("📄 Data Terakhir (10 Baris):")
-    st.dataframe(df.tail(10))
-
-    window_size = 60
-    if len(df) < window_size:
-        st.warning(f"⚠️ Data minimal harus {window_size} baris.")
-        st.stop()
-
-    # Preprocessing
-    data_values = df['tag_value'].values[-window_size:].reshape(-1, 1)
-    scaled_values = scaler.transform(data_values)
-    X_input = np.array([scaled_values])  # Bentuk: (1, 60, 1)
-
-    # Prediksi
-    prediction = model.predict(X_input)
-
-    try:
-        prediction_rescaled = scaler.inverse_transform(prediction)
-    except Exception as e:
-        st.error(f"❌ Gagal inverse transform hasil prediksi: {e}")
-        st.stop()
-
-    # Siapkan data hasil prediksi
-    if prediction_rescaled.shape[1] == 1:
-        pred_array = [prediction_rescaled[0][0]] * 10
+    if 'ddate' not in df.columns or 'tag_value' not in df.columns:
+        st.error("CSV harus memiliki kolom 'ddate' dan 'tag_value'.")
     else:
-        pred_array = prediction_rescaled[0]
+        # Ubah timestamp
+        df['ddate'] = pd.to_datetime(df['ddate'])
 
-    pred_df = pd.DataFrame(pred_array, columns=["Prediksi"])
+        # Sort data jika belum urut
+        df = df.sort_values('ddate')
 
-    # Tampilkan tabel
-    st.subheader("📈 Hasil Prediksi (10 Menit ke Depan):")
-    st.dataframe(pred_df)
+        # Normalisasi
+        scaled_data = scaler.transform(df[['tag_value']])
 
-    # Tampilkan line_chart (Streamlit)
-    st.subheader("📊 Grafik Sederhana (Line Chart Streamlit):")
-    st.line_chart(pred_df)
+        # Buat window input
+        window_size = 60
+        X_input = create_sequences(scaled_data, window_size)
 
-    # Tampilkan Matplotlib chart
-    st.subheader("📉 Grafik Prediksi (Matplotlib):")
-    plt.figure(figsize=(8, 4))
-    plt.plot(range(1, len(pred_array)+1), pred_array, marker='o', color='blue', label='Prediksi')
-    plt.title("Prediksi Nilai Sensor untuk 10 Menit ke Depan")
-    plt.xlabel("Menit ke-")
-    plt.ylabel("Nilai Prediksi")
-    plt.grid(True)
-    plt.legend()
-    st.pyplot(plt)
+        if len(X_input) == 0:
+            st.warning("Data terlalu sedikit untuk dibuat sequence (minimal 60 baris).")
+        else:
+            # Prediksi
+            y_pred_scaled = model.predict(X_input)
+            y_pred = scaler.inverse_transform(y_pred_scaled)
 
-    # Download tombol
-    csv = pred_df.to_csv(index=False).encode('utf-8')
-    st.download_button("⬇️ Download Hasil Prediksi (.csv)", data=csv, file_name="prediksi_10_menit.csv", mime="text/csv")
+            # Gabungkan ke DataFrame (disesuaikan offset window)
+            df_pred = df.iloc[window_size:].copy()
+            df_pred['predicted'] = y_pred
+
+            # Tampilkan data tabel
+            st.subheader("🗃️ Data Asli dan Prediksi")
+            st.dataframe(df_pred[['ddate', 'tag_value', 'predicted']].head(20))
+
+            # Plot
+            st.subheader("📊 Visualisasi Prediksi vs Data Aktual")
+            fig, ax = plt.subplots(figsize=(12, 6))
+            ax.plot(df_pred['ddate'], df_pred['tag_value'], label="Aktual", color='blue')
+            ax.plot(df_pred['ddate'], df_pred['predicted'], label="Prediksi", color='orange')
+            ax.set_xlabel("Waktu")
+            ax.set_ylabel("Nilai")
+            ax.legend()
+            st.pyplot(fig)
+else:
+    st.info("Silakan unggah file CSV untuk melakukan prediksi.")
