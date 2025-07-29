@@ -6,8 +6,8 @@ from keras.models import load_model
 import joblib
 
 # Konfigurasi halaman
-st.set_page_config(page_title="Prediksi CNN+LSTM", layout="wide")
-st.title("📈 Prediksi Time Series dengan CNN + LSTM")
+st.set_page_config(page_title="Prediksi Wavelet+LSTM", layout="wide")
+st.title("📈 Prediksi Time Series dengan Wavelet Transfomr + LSTM")
 
 # Load model & scaler
 @st.cache_resource
